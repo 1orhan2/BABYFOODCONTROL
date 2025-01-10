@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BABYFOODCONTROL</title>
+    <style>
+        /* Allgemeine Formatierungen für die Seite */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Container für die Inhalte */
+        .container {
+            background: rgb(200, 255, 255);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        /* Titelgestaltung */
+        h1 {
+            font-size: 30px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        /* Formatierung für Zeilen mit Werten (z. B. Zustand, Temperatur) */
+        .value-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        /* Etiketten für die Werte */
+        .label {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Gestaltung der LED-Statusanzeige */
+        .led-status {
+            display: flex;
+            align-items: center;
+        }
+
+        .status-circle {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        /* Styling der Werte */
+        .value {
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        /* Farbliche Kennzeichnung der Werte */
+        .value.blue {
+            color: blue;
+        }
+
+        .value.red {
+            color: red;
+            border: none; /* Sicherstellen, dass keine rote Umrandung angezeigt wird */
+            background-color: transparent; /* Sicherstellen, dass kein Hintergrund angezeigt wird */
+        }
+
+        .value.blue-loading {
+            color: blue;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* Fortschrittsbalken */
+        .progress-bar-container {
+            width: 100%;
+            height: 24px;
+            background-color: #ddd;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 0px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        /* Text innerhalb des Fortschrittsbalkens */
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            font-weight: bold;
+            color: blue;
+        }
+
+        /* Footer-Design */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            margin-bottom: 0px;
+        }
+
+        /* Footer-Text */
+        .footer-text {
+            font-size: 12px;
+            text-align: left;
+            color: #555;
+        }
+
+        /* Hilfe-Button */
+        .help-button {
+            width: 30px;
+            height: 30px;
+            background-color: blue;
+            border-radius: 50%;
+            color: white;
+            font-size: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Hilfe-Seite */
+        .help-page {
+            display: none;
+            background: rgb(200, 255, 255);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            max-height: 70vh; /* Maximale Höhe der Hilfeseite */
+            overflow-y: auto; /* Ermöglicht das Scrollen, wenn der Inhalt zu groß ist */
+        }
+
+        /* Zurück-Button */
+        .back-button {
+            background-color: blue;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* LED-Kreise für die Zustandsanzeige */
+        .led-circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Farben für die LED-Kreise */
+        .green {
+            background-color: #4CAF50; /* Grüner Kreis */
+        }
+
+        .orange {
+            background-color: #FF9800; /* Oranger Kreis */
+        }
+
+        .red {
+            background-color: #F44336; /* Roter Kreis */
+        }
+
+        /* Bild anpassen */
+            .header-image {
+            width: 80%; /* Das Bild nimmt nur 80 % der Containerbreite ein */
+            max-width: 100%; /* Verhindert, dass das Bild den Container überschreitet */
+            height: auto; /* Bewahrt das Seitenverhältnis des Bildes */
+            border-radius: 10px; /* Optionale Rundungen für das Bild, passend zum Container */
+            margin-bottom: 0px; /* Abstand zwischen dem Bild und der Trennlinie */
+            display: block; /* Zentriert das Bild */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+    </style>
+    <script>
+        const accessToken = "2e89f3bc60c662feea53a0afbf93f4bd93568ff2"; // Authentifizierungstoken
+        const deviceId = "0a10aced202194944a058a4c"; // Geräte-ID
+
+        const minTemp = 4; // Mindesttemperatur (°C)
+        const maxTemp = 25; // Maximale Temperatur (°C)
+
+        // Funktion zur Formatierung der Zeit (in Sekunden)
+        function formatTime(seconds) {
+            if (seconds < 0) seconds = 0; // Negative Werte vermeiden
+
+            const days = Math.floor(seconds / (24 * 3600));
+            seconds %= 24 * 3600;
+            const hours = Math.floor(seconds / 3600);
+            seconds %= 3600;
+            const minutes = Math.floor(seconds / 60);
+            seconds %= 60;
+
+            return `${String(days).padStart(2, "0")}:${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+        }
+
+        // Berechnung des Fortschritts in %
+        function calculateProgress(ablaufzeit, constantAblaufzeit) {
+            if (constantAblaufzeit === 0) return 0;
+
+            let progress = (ablaufzeit * 100) / constantAblaufzeit;
+            if (progress > 100) progress = 100;
+            if (progress < 0) progress = 0;
+
+            return progress;
+        }
+
+        // Bestimmung der Fortschrittsbalkenfarbe
+        function getProgressBarColor(progress) {
+            if (progress >= 25) {
+                // Grüner Verlauf von progress 25 bis 100
+                const greenStart = { r: 255, g: 200, b: 0 }; // Farbe bei progress 25
+                const greenEnd = { r: 0, g: 200, b: 0 }; // Farbe bei progress 100
+
+                const ratio = (progress - 25) / 75; // Normierung auf Bereich 0 bis 1
+                const red = Math.round(greenStart.r + (greenEnd.r - greenStart.r) * ratio);
+                const green = Math.round(greenStart.g + (greenEnd.g - greenStart.g) * ratio);
+                const blue = Math.round(greenStart.b + (greenEnd.b - greenStart.b) * ratio);
+
+                return `rgb(${red}, ${green}, ${blue})`;
+            } else if (progress >= 0) {
+                // Orange Verlauf von progress 0 bis 25
+                const orangeStart = { r: 255, g: 180, b: 0 }; // Farbe bei progress 0
+                const orangeEnd = { r: 255, g: 200, b: 0 }; // Farbe bei progress 25
+
+                const ratio = progress / 25; // Normierung auf Bereich 0 bis 1
+                const red = Math.round(orangeStart.r + (orangeEnd.r - orangeStart.r) * ratio);
+                const green = Math.round(orangeStart.g + (orangeEnd.g - orangeStart.g) * ratio);
+                const blue = Math.round(orangeStart.b + (orangeEnd.b - orangeStart.b) * ratio);
+
+                return `rgb(${red}, ${green}, ${blue})`;
+            } 
+        }
+
+        // Funktion zum Abrufen der Variablen vom Server
+        async function fetchVariables() {
+            try {
+                // Abruf des LED-Status
+                const ledResponse = await fetch(`https://api.particle.io/v1/devices/${deviceId}/ledStatus`, {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`
+                    }
+                });
+                const ledData = await ledResponse.json();
+                const ledStateElement = document.getElementById("ledstate");
+
+                ledStateElement.innerText = "LÄDT..."; // Standardanzeige
+                ledStateElement.className = "value blue-loading"; // Standardanzeige-Style
+
+                if (ledData.result !== undefined) {
+                    const ledState = ledData.result.toUpperCase(); // LED-Status in Großbuchstaben
+                    const circleElement = document.getElementById("ledcircle");
+
+                    if (ledState === "AUS") {
+                        circleElement.style.backgroundColor = "transparent"; // Keine Farbe
+                        ledStateElement.innerText = "AUS"; // Status "AUS"
+                        ledStateElement.className = "value blue"; // Standard-Style
+                        ledStateElement.style.color = "blue";
+                    } else if (ledState === "GRÜN") {
+                        circleElement.style.backgroundColor = "green"; // Grüne LED
+                        ledStateElement.innerText = "MILCH IST FRISCH";
+                        ledStateElement.style.color = "green"; // Grüne Farbe
+                    } else if (ledState === "ORANGE") {
+                        circleElement.style.backgroundColor = "orange"; // Orange LED
+                        ledStateElement.innerText = "MILCH LÄUFT BALD AB !";
+                        ledStateElement.style.color = "orange"; // Orange Farbe
+                    } else if (ledState === "ROT") {
+                        circleElement.style.backgroundColor = "red"; // Rote LED
+                        ledStateElement.innerText = "MILCH IST ABGELAUFEN !";
+                        ledStateElement.style.color = "red"; // Rote Farbe
+                    }
+                }
+            } catch (error) {
+                console.error("Fehler beim Abrufen des LED-Zustands: ", error);
+            }
+
+            try {
+                // Abruf der realen Temperatur
+                const tempResponse = await fetch(`https://api.particle.io/v1/devices/${deviceId}/realTemp`, {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`
+                    }
+                });
+                const tempData = await tempResponse.json();
+                if (tempData.result !== undefined) {
+                    const tempElement = document.getElementById("realtemp");
+                    const realTemp = tempData.result;
+
+                    tempElement.innerText = realTemp + " °C"; // Temperaturanzeige
+                    tempElement.className = "value blue"; // Standardfarbe
+
+                    // Temperatur außerhalb des sicheren Bereichs
+                    if (realTemp < minTemp || realTemp > maxTemp) {
+                        tempElement.classList.remove("blue");
+                        tempElement.classList.add("red"); // Rote Farbe bei ungültiger Temperatur
+                    }
+                }
+
+                // Abruf der Ablaufzeit
+                const ablaufzeitResponse = await fetch(`https://api.particle.io/v1/devices/${deviceId}/ablaufzeit`, {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`
+                    }
+                });
+                const ablaufzeitData = await ablaufzeitResponse.json();
+
+                // Abruf der konstanten Ablaufzeit
+                const constantAblaufzeitResponse = await fetch(`https://api.particle.io/v1/devices/${deviceId}/constantAblaufzeit`, {
+                    headers: {
+                        "Authorization": `Bearer ${accessToken}`
+                    }
+                });
+                const constantAblaufzeitData = await constantAblaufzeitResponse.json();
+
+                if (ablaufzeitData.result !== undefined && constantAblaufzeitData.result !== undefined) {
+                    const ablaufzeitElement = document.getElementById("ablaufzeit");
+                    const timeInSeconds = Math.floor(ablaufzeitData.result / 1000);
+                    ablaufzeitElement.innerText = formatTime(timeInSeconds); // Ablaufzeit formatieren
+                    ablaufzeitElement.className = "value blue"; // Standardfarbe
+
+                    // Fortschrittsberechnung und Anzeige
+                    const progress = calculateProgress(ablaufzeitData.result, constantAblaufzeitData.result);
+                    const progressBarElement = document.querySelector(".progress-bar");
+                    const progressTextElement = document.querySelector(".progress-text");
+
+                    progressBarElement.style.width = `${progress}%`;
+                    progressBarElement.style.backgroundColor = getProgressBarColor(progress); // Dynamische Farbänderung
+                    progressTextElement.innerText = `${Math.round(progress)}%`; // Prozentanzeige
+                }
+            } catch (error) {
+                console.error("Fehler beim Abrufen der Variablen: ", error);
+            }
+        }
+
+        // Initialisierung und Datenabfrage beim Laden der Seite
+        window.onload = function() {
+            document.getElementById("ledstate").innerText = "LÄDT...";
+            document.getElementById("realtemp").innerText = "LÄDT...";
+            document.getElementById("ablaufzeit").innerText = "LÄDT...";
+
+            document.getElementById("ledstate").className = "value blue-loading";
+            document.getElementById("realtemp").className = "value blue";
+            document.getElementById("ablaufzeit").className = "value blue";
+
+            fetchVariables();
+        };
+
+        // Daten alle 1000ms aktualisieren
+        setInterval(fetchVariables, 1000);
+
+        // Funktionen für die Hilfe-Seite
+        function openHelpPage() {
+            document.querySelector(".help-page").style.display = "block";
+        }
+
+        function closeHelpPage() {
+            document.querySelector(".help-page").style.display = "none";
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <img src="https://www.dropbox.com/scl/fi/2q7oy4whbw6v9c8ch5gd2/BABYFOODCONTROL.jpg?rlkey=o590fujbmziuijoy31sdz59xt&st=w080ql1m&raw=1" class="header-image">
+        <hr>
+        <div class="value-row">
+            <span class="label">ZUSTAND:</span>
+            <div class="led-status">
+                <div id="ledcircle" class="status-circle"></div>
+                <span id="ledstate" class="value blue-loading">LÄDT...</span>
+            </div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar" style="width: 0%; background-color: #00ff00;"></div>
+            <div class="progress-text">LÄDT...</div>
+        </div>
+
+        <div class="value-row">
+            <span class="label">ABLAUFZEIT:</span>
+            <span class="value blue" id="ablaufzeit">LÄDT...</span>
+        </div>
+
+        <div class="value-row">
+            <span class="label">TEMPERATUR:</span>
+            <span class="value blue" id="realtemp">LÄDT...</span>
+        </div>
+        <hr>
+
+        <div class="footer">
+            <span class="footer-text">© Copyright by BabyFoodControl</span>
+            <div class="help-button" onclick="openHelpPage()">?</div>
+        </div>
+    </div>
+
+<div class="help-page">
+    <h2>Hilfe – BabyFoodControl</h2>
+
+    <h3>Was ist BabyFoodControl?</h3>
+    <p>BabyFoodControl ist ein innovativer Cupholder, der dazu entwickelt wurde, die Haltbarkeit von Muttermilch in einer Babyflasche zu überwachen. Das Ziel ist es, sicherzustellen, dass die Milch immer im richtigen Temperaturbereich bleibt, um die Qualität und Sicherheit für dein Baby zu gewährleisten.</p>
+
+    <h3>Wie funktioniert es?</h3>
+    <p>Der BabyFoodControl Cupholder misst kontinuierlich die Temperatur der Muttermilch in der Flasche mithilfe eines ARCELI SHT31/SHT3X Sensors. Der Cupholder enthält drei LEDs, die den Zustand der Milch anzeigen:</p>
+    <ul>
+        <span class="led-circle green"></span><strong>Grüne LED</strong>: Die Milch ist frisch und im sicheren Temperaturbereich. Sie leuchtet, wenn noch 25% oder mehr der Ablaufzeit verbleiben.<br>
+        <br>
+        <span class="led-circle orange"></span><strong>Orange LED</strong>: Die Milch ist noch im sicheren Bereich, aber die Ablaufzeit neigt sich dem Ende zu. Sie leuchtet, wenn nur noch weniger als 25% der Ablaufzeit verbleiben.<br>
+        <br>
+        <span class="led-circle red"></span><strong>Rote LED</strong>: Die Milch ist abgelaufen. Sie leuchtet, wenn die Ablaufzeit vollständig abgelaufen ist.
+    </ul>
+
+    <h3>Blinken der LEDs:</h3>
+    <p>Wenn die Temperatur der Milch den vorgegebenen sicheren Bereich überschreitet (über 25°C oder unter 4°C), beginnen die LEDs zu blinken. Dies signalisiert, dass die Milch möglicherweise einer extremen Temperatur ausgesetzt ist. Sobald die Temperatur wieder im sicheren Bereich liegt, hört die LED auf zu blinken und leuchtet konstant.</p>
+
+    <h3>Dynamische Ablaufzeit:</h3>
+    <p>Die Ablaufzeit wird auf Grundlage der gemessenen Temperatur in Echtzeit berechnet. Die Temperatur hat einen direkten Einfluss auf die Haltbarkeit der Milch – je kälter die Milch ist, desto länger bleibt sie haltbar. Umgekehrt verringert sich die Haltbarkeit mit steigender Temperatur.</p>
+
+    <h3>Wie wird der Cupholder verwendet?</h3>
+    <p>Wenn eine Babyflasche in den Cupholder eingelegt wird, wird ein Druckschalter aktiviert, und das Programm startet automatisch. Solange die Flasche im Cupholder bleibt, wird die Temperatur der Milch überwacht, und die LEDs zeigen den Status an. Sobald die Flasche entfernt wird, wird der Cupholder zurückgesetzt und wartet auf die nächste Flasche.<br>
+    <p style="color: red;">Wichtig: Milch, die bereits im Cupholder war, darf nicht erneut in den Cupholder eingefüllt werden. Es muss frische Milch verwendet werden.</p></p>
+
+    <h3>Ziel des Projekts:</h3>
+    <p>Unser Ziel mit BabyFoodControl ist es, Eltern und Betreuern eine einfache Möglichkeit zu bieten, die Qualität und Sicherheit der Muttermilch zu überwachen. Wir möchten sicherstellen, dass die Milch stets im optimalen Zustand für das Baby bleibt.</p>
+
+    <h3>Warum ist es wichtig?</h3>
+    <p>Muttermilch ist empfindlich gegenüber Temperaturschwankungen, und zu hohe oder zu niedrige Temperaturen können die Nährstoffe beeinträchtigen oder sogar gesundheitsschädlich sein. BabyFoodControl hilft, dies zu verhindern und die Milch sicher aufzubewahren.</p>
+
+    <button class="back-button" onclick="closeHelpPage()">ZURÜCK</button>
+</div>
+</body>
+</html>
